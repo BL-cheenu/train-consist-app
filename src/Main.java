@@ -36,9 +36,7 @@ public class Main {
 
         while (true) {
             String bogieId = readBogieId(scanner);
-            if (bogieId.equalsIgnoreCase("exit")) {
-                break;
-            }
+            if (bogieId.equalsIgnoreCase("exit")) break;
 
             Optional<BogieSearchResult> searchResult =
                     searchService.findById(consist.getBogies(), bogieId);
@@ -51,10 +49,12 @@ public class Main {
 
             System.out.print("Search another bogie? (yes / no): ");
             String again = scanner.nextLine().trim().toLowerCase();
-            if (!again.equals("yes")) {
-                break;
-            }
+            if (!again.equals("yes")) break;
         }
+
+        // UC-04: Junction attach / detach
+        JunctionOperationsMenu junctionMenu = new JunctionOperationsMenu(scanner);
+        junctionMenu.run(consist, routeType, scanner);
 
         scanner.close();
     }
@@ -75,9 +75,7 @@ public class Main {
         while (true) {
             System.out.print("Enter Bogie ID to search (or 'exit' to quit): ");
             String input = scanner.nextLine().trim();
-            if (!input.isEmpty()) {
-                return input;
-            }
+            if (!input.isEmpty()) return input;
             System.out.println("  Bogie ID cannot be empty. Please try again.");
         }
     }

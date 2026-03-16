@@ -1,5 +1,13 @@
+import java.util.List;
+
 public class SafetyValidator {
 
+    // UC-04: accepts List<Bogie>
+    public ValidationResult validate(List<Bogie> bogies, RouteType routeType) {
+        return validate(bogies.toArray(new Bogie[0]), routeType);
+    }
+
+    // UC-02 original: accepts Bogie[] — unchanged
     public ValidationResult validate(Bogie[] bogies, RouteType routeType) {
         CapacityCalculator calculator = new CapacityCalculator();
         int passengerCapacity = calculator.computePassengerCapacity(bogies);
@@ -14,7 +22,6 @@ public class SafetyValidator {
         int count = 0;
         String[] temp = new String[bogies.length + 1];
 
-        // Adjacency check — O(n) single pass
         for (int i = 0; i < bogies.length - 1; i++) {
             Bogie current = bogies[i];
             Bogie next = bogies[i + 1];
@@ -32,14 +39,12 @@ public class SafetyValidator {
             }
         }
 
-        // Route max-length check
         if (bogies.length > routeType.getMaxLength()) {
             temp[count++] = "LENGTH VIOLATION: Consist has " + bogies.length
                     + " bogies but " + routeType.name()
                     + " route allows max " + routeType.getMaxLength() + " bogies";
         }
 
-        // Copy into exact-sized array
         String[] violations = new String[count];
         for (int i = 0; i < count; i++) {
             violations[i] = temp[i];

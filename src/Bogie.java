@@ -1,3 +1,4 @@
+import java.util.Objects;
 
 public abstract class Bogie {
 
@@ -21,6 +22,19 @@ public abstract class Bogie {
 
     public int getCapacity() {
         return capacity;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Bogie)) return false;
+        Bogie other = (Bogie) o;
+        return Objects.equals(bogieId, other.bogieId);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(bogieId);
     }
 
     @Override
