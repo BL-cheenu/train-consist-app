@@ -4,7 +4,7 @@ import java.util.Scanner;
 /**
  * Application entry point for the Train Consist Management App.
  *
- * <p>Orchestrates all seven use cases in sequence:
+ * <p>Orchestrates all use cases in sequence:
  * <ol>
  *   <li><b>UC-01</b> — Build and display a train consist.</li>
  *   <li><b>UC-02</b> — Compute capacity and validate safety constraints.</li>
@@ -13,6 +13,7 @@ import java.util.Scanner;
  *   <li><b>UC-05</b> — Reorder bogies via yard shunting operations.</li>
  *   <li><b>UC-06</b> — Journey event log and consist replay.</li>
  *   <li><b>UC-07</b> — Fleet registry — enforce unique bogie IDs on marshal.</li>
+ *   <li><b>UC-08</b> — Safety manifest in attachment order.</li>
  * </ol>
  */
 public class Main {
@@ -39,6 +40,7 @@ public class Main {
         FleetRegistry registry = FleetRegistry.getInstance();
         MarshalService.registerAll(consistA, registry);
 
+        // Shared journey log — used by UC-04, UC-05, UC-06, UC-08
         JourneyLog journeyLog = new JourneyLog(consistA.getTrainNumber());
 
         // ── UC-02: Capacity and safety validation ──────────────────────────────
@@ -83,6 +85,9 @@ public class Main {
         ConsistPrinter.printSummary(consistB);
 
         MarshalMenu.run(consistA, consistB, registry);
+
+        // ── UC-08: Safety manifest in attachment order ─────────────────────────
+        ManifestMenu.run(journeyLog, consistA);
 
         scanner.close();
     }
