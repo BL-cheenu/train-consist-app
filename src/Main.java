@@ -1,18 +1,18 @@
-import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.Scanner;
 
 /**
  * Application entry point for the Train Consist Management App.
  *
- * <p>Orchestrates all six use cases in sequence:
+ * <p>Orchestrates all seven use cases in sequence:
  * <ol>
  *   <li><b>UC-01</b> — Build and display a train consist.</li>
  *   <li><b>UC-02</b> — Compute capacity and validate safety constraints.</li>
  *   <li><b>UC-03</b> — Search and inspect a bogie by ID.</li>
  *   <li><b>UC-04</b> — Attach and detach bogies at a junction.</li>
  *   <li><b>UC-05</b> — Reorder bogies via yard shunting operations.</li>
- *   <li><b>UC-06</b> — View journey event log and replay consist state.</li>
+ *   <li><b>UC-06</b> — Journey event log and consist replay.</li>
+ *   <li><b>UC-07</b> — Fleet registry — enforce unique bogie IDs on marshal.</li>
  * </ol>
  */
 public class Main {
@@ -30,16 +30,20 @@ public class Main {
         System.out.println("     TRAIN CONSIST MANAGEMENT APP");
         System.out.println("========================================\n");
 
-        // ── UC-01: Build consist ───────────────────────────────────────────────
-        TrainConsist consist = ConsistBuilder.buildConsist();
-        ConsistPrinter.printSummary(consist);
+        // ── UC-01: Build consist A ─────────────────────────────────────────────
+        System.out.println("--- Building Consist A ---");
+        TrainConsist consistA = ConsistBuilder.buildConsist();
+        ConsistPrinter.printSummary(consistA);
 
-        // Create the journey log — shared across UC-04, UC-05, UC-06
-        JourneyLog journeyLog = new JourneyLog(consist.getTrainNumber());
+        // Seed the fleet registry with consist A's bogies
+        FleetRegistry registry = FleetRegistry.getInstance();
+        MarshalService.registerAll(consistA, registry);
+
+        JourneyLog journeyLog = new JourneyLog(consistA.getTrainNumber());
 
         // ── UC-02: Capacity and safety validation ──────────────────────────────
         RouteType routeType = readRouteType();
-        ValidationResult result = SafetyValidator.validate(consist.getBogies(), routeType);
+        ValidationResult result = SafetyValidator.validate(consistA.getBogies(), routeType);
         ValidationPrinter.printReport(result);
 
         // ── UC-03: Search bogie by ID ──────────────────────────────────────────
@@ -52,26 +56,33 @@ public class Main {
             if (bogieId.equalsIgnoreCase("exit")) break;
 
             Optional<BogieSearchResult> searchResult =
-                    BogieSearchService.findById(consist.getBogies(), bogieId);
+                    BogieSearchService.findById(consistA.getBogies(), bogieId);
 
             if (searchResult.isPresent()) {
-                BogieSearchPrinter.printFound(searchResult.get(), consist.getBogies().length);
+                BogieSearchPrinter.printFound(searchResult.get(), consistA.getBogies().length);
             } else {
-                BogieSearchPrinter.printNotFound(bogieId, consist.getTrainNumber());
+                BogieSearchPrinter.printNotFound(bogieId, consistA.getTrainNumber());
             }
 
             System.out.print("Search another bogie? (yes / no): ");
             if (!scanner.nextLine().trim().equalsIgnoreCase("yes")) break;
         }
 
-        // ── UC-04: Junction attach / detach (now instrumented with journeyLog) ─
-        JunctionOperationsMenu.run(consist, routeType, journeyLog);
+        // ── UC-04: Junction attach / detach ────────────────────────────────────
+        JunctionOperationsMenu.run(consistA, routeType, journeyLog);
 
-        // ── UC-05: Yard shunting (now instrumented with journeyLog) ────────────
-        ShuntingMenu.run(consist, journeyLog);
+        // ── UC-05: Yard shunting ───────────────────────────────────────────────
+        ShuntingMenu.run(consistA, journeyLog);
 
         // ── UC-06: Journey event log and replay ────────────────────────────────
         JourneyLogMenu.run(journeyLog);
+
+        // ── UC-07: Fleet marshal — build consist B, then attempt merge ─────────
+        System.out.println("\n--- Building Consist B (for marshal) ---");
+        TrainConsist consistB = ConsistBuilder.buildConsist();
+        ConsistPrinter.printSummary(consistB);
+
+        MarshalMenu.run(consistA, consistB, registry);
 
         scanner.close();
     }
