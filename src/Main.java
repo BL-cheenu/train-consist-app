@@ -15,6 +15,7 @@ import java.util.Scanner;
  *   <li><b>UC-07</b> — Fleet registry — enforce unique bogie IDs on marshal.</li>
  *   <li><b>UC-08</b> — Safety manifest in attachment order.</li>
  *   <li><b>UC-09</b> — Load plan — sort bogies by capacity.</li>
+ *   <li><b>UC-10</b> — Real-time bogie lookup and cargo update.</li>
  * </ol>
  */
 public class Main {
@@ -84,7 +85,6 @@ public class Main {
         System.out.println("\n--- Building Consist B (for marshal) ---");
         TrainConsist consistB = ConsistBuilder.buildConsist();
         ConsistPrinter.printSummary(consistB);
-
         MarshalMenu.run(consistA, consistB, registry);
 
         // ── UC-08: Safety manifest in attachment order ─────────────────────────
@@ -92,6 +92,9 @@ public class Main {
 
         // ── UC-09: Load plan — sort bogies by capacity ─────────────────────────
         LoadPlanMenu.run(consistA);
+
+        // ── UC-10: Real-time bogie lookup and cargo update ─────────────────────
+        FleetDashboardMenu.run(consistA);
 
         scanner.close();
     }

@@ -7,8 +7,10 @@ import java.util.Objects;
  * When two bogies have equal capacity, {@code bogieId} is used as a tiebreaker
  * to prevent TreeSet from silently deduplicating bogies with the same capacity.</p>
  *
- * <p>Equality is based solely on {@code bogieId} — consistent with
- * {@link #equals} and {@link #hashCode} for correct List.remove() behaviour.</p>
+ * <p>UC-10 adds mutable cargo fields ({@code cargoWeight}, {@code cargoDesc})
+ * that can be updated in-place via {@link BogieIndex#update}.
+ * Because the HashMap stores references to the same Bogie objects as the List,
+ * updating through the map is automatically reflected in the list — no sync needed.</p>
  */
 public abstract class Bogie implements Comparable<Bogie> {
 
@@ -26,7 +28,22 @@ public abstract class Bogie implements Comparable<Bogie> {
     protected int capacity;
 
     /**
+     * Current cargo weight loaded onto this bogie in tonnes (UC-10).
+     * Mutable — updated in-place via BogieIndex.update().
+     * Default: 0.0 (empty bogie).
+     */
+    private double cargoWeight;
+
+    /**
+     * Human-readable description of current cargo (UC-10).
+     * Mutable — updated in-place via BogieIndex.update().
+     * Default: empty string.
+     */
+    private String cargoDesc;
+
+    /**
      * Constructs a Bogie with the given ID, type, and capacity.
+     * Cargo fields default to 0.0 and empty string.
      *
      * @param bogieId   unique identifier for this bogie
      * @param bogieType top-level classification (PASSENGER or GOODS)
@@ -36,6 +53,8 @@ public abstract class Bogie implements Comparable<Bogie> {
         this.bogieId = bogieId;
         this.bogieType = bogieType;
         this.capacity = capacity;
+        this.cargoWeight = 0.0;
+        this.cargoDesc = "";
     }
 
     /**
@@ -66,6 +85,46 @@ public abstract class Bogie implements Comparable<Bogie> {
     }
 
     /**
+     * Returns the current cargo weight loaded on this bogie.
+     *
+     * @return cargo weight in tonnes
+     */
+    public double getCargoWeight() {
+        return cargoWeight;
+    }
+
+    /**
+     * Updates the cargo weight of this bogie in-place.
+     * Called by {@link BogieIndex#update} — reflected immediately in both
+     * the HashMap and the live List due to reference semantics.
+     *
+     * @param cargoWeight new cargo weight in tonnes (must be >= 0)
+     */
+    public void setCargoWeight(double cargoWeight) {
+        this.cargoWeight = cargoWeight;
+    }
+
+    /**
+     * Returns the current cargo description of this bogie.
+     *
+     * @return cargo description string
+     */
+    public String getCargoDesc() {
+        return cargoDesc;
+    }
+
+    /**
+     * Updates the cargo description of this bogie in-place.
+     * Called by {@link BogieIndex#update} — reflected immediately in both
+     * the HashMap and the live List due to reference semantics.
+     *
+     * @param cargoDesc new cargo description
+     */
+    public void setCargoDesc(String cargoDesc) {
+        this.cargoDesc = cargoDesc;
+    }
+
+    /**
      * Returns the subtype of this bogie as a String.
      * Subclasses return their specific enum's {@code .name()} value.
      *
@@ -75,35 +134,28 @@ public abstract class Bogie implements Comparable<Bogie> {
 
     /**
      * Natural ordering for UC-09 — sorts by capacity ascending.
-     *
-     * <p><b>Tiebreaker rule:</b> when two bogies have equal capacity,
-     * {@code bogieId} is used as a secondary comparator. This is critical —
-     * if compareTo returned 0 for equal-capacity bogies with different IDs,
-     * TreeSet would silently discard one of them as a "duplicate".</p>
+     * Tiebreaker on bogieId prevents TreeSet silent deduplication.
      *
      * @param other the bogie to compare against
      * @return negative if this < other, positive if this > other, 0 only if same bogieId
      */
     @Override
     public int compareTo(Bogie other) {
-        // Primary: compare by capacity ascending
         int capacityCompare = Integer.compare(this.capacity, other.capacity);
-        if (capacityCompare != 0) {
-            return capacityCompare;
-        }
-        // Tiebreaker: compare by bogieId — prevents silent TreeSet deduplication
+        if (capacityCompare != 0) return capacityCompare;
         return this.bogieId.compareTo(other.bogieId);
     }
 
     /**
-     * Returns a formatted summary of this bogie.
-     * Format: {@code bogieId | bogieType | subType | Capacity: capacity}
+     * Returns a formatted summary of this bogie including cargo details.
      *
      * @return human-readable string representation
      */
     @Override
     public String toString() {
-        return bogieId + " | " + bogieType + " | " + getSubType() + " | Capacity: " + capacity;
+        return bogieId + " | " + bogieType + " | " + getSubType()
+                + " | Capacity: " + capacity
+                + " | Cargo: " + cargoWeight + "t (" + cargoDesc + ")";
     }
 
     /**
