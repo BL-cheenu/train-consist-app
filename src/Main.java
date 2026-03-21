@@ -14,6 +14,7 @@ import java.util.Scanner;
  *   <li><b>UC-06</b> — Journey event log and consist replay.</li>
  *   <li><b>UC-07</b> — Fleet registry — enforce unique bogie IDs on marshal.</li>
  *   <li><b>UC-08</b> — Safety manifest in attachment order.</li>
+ *   <li><b>UC-09</b> — Load plan — sort bogies by capacity.</li>
  * </ol>
  */
 public class Main {
@@ -88,6 +89,9 @@ public class Main {
 
         // ── UC-08: Safety manifest in attachment order ─────────────────────────
         ManifestMenu.run(journeyLog, consistA);
+
+        // ── UC-09: Load plan — sort bogies by capacity ─────────────────────────
+        LoadPlanMenu.run(consistA);
 
         scanner.close();
     }

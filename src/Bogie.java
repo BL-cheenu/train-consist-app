@@ -1,19 +1,16 @@
 import java.util.Objects;
 
 /**
- * Abstract base class representing a single bogie (coach/wagon) in a train consist.
+ * Abstract base class representing a single bogie in a train consist.
  *
- * <p>A bogie has a unique ID, a top-level type (PASSENGER or GOODS), and a capacity
- * (seats for passenger bogies, tonnage for goods bogies). Subclasses must provide
- * a concrete {@link #getSubType()} implementation that returns their enum name as a String.</p>
+ * <p>Implements {@link Comparable} for natural ordering by capacity (ascending).
+ * When two bogies have equal capacity, {@code bogieId} is used as a tiebreaker
+ * to prevent TreeSet from silently deduplicating bogies with the same capacity.</p>
  *
- * <p>Equality is based solely on {@code bogieId} — this allows
- * {@code List.remove(bogie)} to work correctly in UC-04.</p>
- *
- * @see PassengerBogie
- * @see GoodsBogie
+ * <p>Equality is based solely on {@code bogieId} — consistent with
+ * {@link #equals} and {@link #hashCode} for correct List.remove() behaviour.</p>
  */
-public abstract class Bogie {
+public abstract class Bogie implements Comparable<Bogie> {
 
     /** Unique identifier for this bogie (e.g. "BG-01"). Used for lookup and equality. */
     protected String bogieId;
@@ -31,7 +28,7 @@ public abstract class Bogie {
     /**
      * Constructs a Bogie with the given ID, type, and capacity.
      *
-     * @param bogieId  unique identifier for this bogie
+     * @param bogieId   unique identifier for this bogie
      * @param bogieType top-level classification (PASSENGER or GOODS)
      * @param capacity  seating count or freight tonnage
      */
@@ -44,7 +41,7 @@ public abstract class Bogie {
     /**
      * Returns the unique ID of this bogie.
      *
-     * @return bogie ID string (e.g. "BG-01")
+     * @return bogie ID string
      */
     public String getBogieId() {
         return bogieId;
@@ -61,7 +58,6 @@ public abstract class Bogie {
 
     /**
      * Returns the capacity of this bogie.
-     * Interpreted as seat count for PASSENGER, or tonnage for GOODS.
      *
      * @return capacity as a positive integer
      */
@@ -70,15 +66,34 @@ public abstract class Bogie {
     }
 
     /**
-     * Returns the subtype of this bogie as a String (enum name).
+     * Returns the subtype of this bogie as a String.
      * Subclasses return their specific enum's {@code .name()} value.
-     *
-     * <p>Returning String (not the enum itself) avoids casting at the call site
-     * and allows polymorphic use in printers and validators without instanceof checks.</p>
      *
      * @return subtype name (e.g. "SLEEPER", "CYLINDRICAL")
      */
     public abstract String getSubType();
+
+    /**
+     * Natural ordering for UC-09 — sorts by capacity ascending.
+     *
+     * <p><b>Tiebreaker rule:</b> when two bogies have equal capacity,
+     * {@code bogieId} is used as a secondary comparator. This is critical —
+     * if compareTo returned 0 for equal-capacity bogies with different IDs,
+     * TreeSet would silently discard one of them as a "duplicate".</p>
+     *
+     * @param other the bogie to compare against
+     * @return negative if this < other, positive if this > other, 0 only if same bogieId
+     */
+    @Override
+    public int compareTo(Bogie other) {
+        // Primary: compare by capacity ascending
+        int capacityCompare = Integer.compare(this.capacity, other.capacity);
+        if (capacityCompare != 0) {
+            return capacityCompare;
+        }
+        // Tiebreaker: compare by bogieId — prevents silent TreeSet deduplication
+        return this.bogieId.compareTo(other.bogieId);
+    }
 
     /**
      * Returns a formatted summary of this bogie.
@@ -93,7 +108,6 @@ public abstract class Bogie {
 
     /**
      * Two bogies are equal if and only if their {@code bogieId} values are equal.
-     * This enables {@code List.remove(bogie)} to locate and remove by ID in UC-04.
      *
      * @param o the object to compare
      * @return true if both bogies share the same bogieId
@@ -107,7 +121,7 @@ public abstract class Bogie {
     }
 
     /**
-     * Hash code derived from {@code bogieId}, consistent with {@link #equals(Object)}.
+     * Hash code derived from {@code bogieId}, consistent with {@link #equals}.
      *
      * @return hash code of the bogieId
      */
