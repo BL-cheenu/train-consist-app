@@ -3,14 +3,12 @@ import java.util.Objects;
 /**
  * Abstract base class representing a single bogie in a train consist.
  *
- * <p>Implements {@link Comparable} for natural ordering by capacity (ascending).
- * When two bogies have equal capacity, {@code bogieId} is used as a tiebreaker
- * to prevent TreeSet from silently deduplicating bogies with the same capacity.</p>
+ * <p>UC-12 adds a {@code weight} field — the physical weight of the bogie in tonnes,
+ * distinct from {@code capacity} (seats or freight tonnage). Weight is used for
+ * braking-balance departure sort: lighter bogies must be towards the front.</p>
  *
- * <p>UC-10 adds mutable cargo fields ({@code cargoWeight}, {@code cargoDesc})
- * that can be updated in-place via {@link BogieIndex#update}.
- * Because the HashMap stores references to the same Bogie objects as the List,
- * updating through the map is automatically reflected in the list — no sync needed.</p>
+ * <p>Implements {@link Comparable} for natural ordering by capacity (UC-09 unchanged).
+ * UC-12 uses explicit Comparator chains, not compareTo.</p>
  */
 public abstract class Bogie implements Comparable<Bogie> {
 
@@ -28,157 +26,99 @@ public abstract class Bogie implements Comparable<Bogie> {
     protected int capacity;
 
     /**
+     * Physical weight of this bogie in tonnes (UC-12).
+     * Used for departure sort — lighter bogies placed towards the front
+     * for braking balance. Distinct from capacity.
+     */
+    protected int weight;
+
+    /**
      * Current cargo weight loaded onto this bogie in tonnes (UC-10).
      * Mutable — updated in-place via BogieIndex.update().
-     * Default: 0.0 (empty bogie).
      */
     private double cargoWeight;
 
     /**
      * Human-readable description of current cargo (UC-10).
      * Mutable — updated in-place via BogieIndex.update().
-     * Default: empty string.
      */
     private String cargoDesc;
 
     /**
-     * Constructs a Bogie with the given ID, type, and capacity.
+     * Constructs a Bogie with the given ID, type, capacity, and weight.
      * Cargo fields default to 0.0 and empty string.
      *
      * @param bogieId   unique identifier for this bogie
      * @param bogieType top-level classification (PASSENGER or GOODS)
      * @param capacity  seating count or freight tonnage
+     * @param weight    physical bogie weight in tonnes (for departure sort)
      */
-    public Bogie(String bogieId, BogieType bogieType, int capacity) {
+    public Bogie(String bogieId, BogieType bogieType, int capacity, int weight) {
         this.bogieId = bogieId;
         this.bogieType = bogieType;
         this.capacity = capacity;
+        this.weight = weight;
         this.cargoWeight = 0.0;
         this.cargoDesc = "";
     }
 
     /**
-     * Returns the unique ID of this bogie.
+     * Backward-compatible constructor — weight defaults to capacity value.
+     * Preserves UC-01 through UC-11 constructors without modification.
      *
-     * @return bogie ID string
+     * @param bogieId   unique identifier
+     * @param bogieType classification
+     * @param capacity  seating or tonnage capacity
      */
-    public String getBogieId() {
-        return bogieId;
+    public Bogie(String bogieId, BogieType bogieType, int capacity) {
+        this(bogieId, bogieType, capacity, capacity);
     }
 
-    /**
-     * Returns the top-level type of this bogie.
-     *
-     * @return PASSENGER or GOODS
-     */
-    public BogieType getBogieType() {
-        return bogieType;
-    }
+    public String getBogieId()   { return bogieId; }
+    public BogieType getBogieType() { return bogieType; }
+    public int getCapacity()     { return capacity; }
 
     /**
-     * Returns the capacity of this bogie.
+     * Returns the physical weight of this bogie in tonnes.
+     * Used for UC-12 departure sort (braking balance optimisation).
      *
-     * @return capacity as a positive integer
+     * @return bogie weight in tonnes
      */
-    public int getCapacity() {
-        return capacity;
-    }
+    public int getWeight()       { return weight; }
 
-    /**
-     * Returns the current cargo weight loaded on this bogie.
-     *
-     * @return cargo weight in tonnes
-     */
-    public double getCargoWeight() {
-        return cargoWeight;
-    }
+    public double getCargoWeight() { return cargoWeight; }
+    public void setCargoWeight(double cargoWeight) { this.cargoWeight = cargoWeight; }
+    public String getCargoDesc()   { return cargoDesc; }
+    public void setCargoDesc(String cargoDesc)     { this.cargoDesc = cargoDesc; }
 
-    /**
-     * Updates the cargo weight of this bogie in-place.
-     * Called by {@link BogieIndex#update} — reflected immediately in both
-     * the HashMap and the live List due to reference semantics.
-     *
-     * @param cargoWeight new cargo weight in tonnes (must be >= 0)
-     */
-    public void setCargoWeight(double cargoWeight) {
-        this.cargoWeight = cargoWeight;
-    }
-
-    /**
-     * Returns the current cargo description of this bogie.
-     *
-     * @return cargo description string
-     */
-    public String getCargoDesc() {
-        return cargoDesc;
-    }
-
-    /**
-     * Updates the cargo description of this bogie in-place.
-     * Called by {@link BogieIndex#update} — reflected immediately in both
-     * the HashMap and the live List due to reference semantics.
-     *
-     * @param cargoDesc new cargo description
-     */
-    public void setCargoDesc(String cargoDesc) {
-        this.cargoDesc = cargoDesc;
-    }
-
-    /**
-     * Returns the subtype of this bogie as a String.
-     * Subclasses return their specific enum's {@code .name()} value.
-     *
-     * @return subtype name (e.g. "SLEEPER", "CYLINDRICAL")
-     */
+    /** Returns the subtype name as a String. Implemented by subclasses. */
     public abstract String getSubType();
 
     /**
-     * Natural ordering for UC-09 — sorts by capacity ascending.
-     * Tiebreaker on bogieId prevents TreeSet silent deduplication.
-     *
-     * @param other the bogie to compare against
-     * @return negative if this < other, positive if this > other, 0 only if same bogieId
+     * Natural ordering (UC-09): capacity ascending, bogieId tiebreaker.
+     * Prevents TreeSet silent deduplication on equal capacity.
      */
     @Override
     public int compareTo(Bogie other) {
-        int capacityCompare = Integer.compare(this.capacity, other.capacity);
-        if (capacityCompare != 0) return capacityCompare;
+        int cap = Integer.compare(this.capacity, other.capacity);
+        if (cap != 0) return cap;
         return this.bogieId.compareTo(other.bogieId);
     }
 
-    /**
-     * Returns a formatted summary of this bogie including cargo details.
-     *
-     * @return human-readable string representation
-     */
     @Override
     public String toString() {
         return bogieId + " | " + bogieType + " | " + getSubType()
-                + " | Capacity: " + capacity
+                + " | Cap: " + capacity + " | Wt: " + weight + "t"
                 + " | Cargo: " + cargoWeight + "t (" + cargoDesc + ")";
     }
 
-    /**
-     * Two bogies are equal if and only if their {@code bogieId} values are equal.
-     *
-     * @param o the object to compare
-     * @return true if both bogies share the same bogieId
-     */
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof Bogie)) return false;
-        Bogie other = (Bogie) o;
-        return Objects.equals(bogieId, other.bogieId);
+        return Objects.equals(bogieId, ((Bogie) o).bogieId);
     }
 
-    /**
-     * Hash code derived from {@code bogieId}, consistent with {@link #equals}.
-     *
-     * @return hash code of the bogieId
-     */
     @Override
-    public int hashCode() {
-        return Objects.hash(bogieId);
-    }
+    public int hashCode() { return Objects.hash(bogieId); }
 }

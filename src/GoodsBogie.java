@@ -1,25 +1,31 @@
 /**
  * Concrete bogie representing a GOODS wagon.
- *
- * <p>Extends {@link Bogie} with a {@link GoodsSubType} field that specifies
- * the physical shape of the wagon (RECTANGULAR or CYLINDRICAL).
- * The {@code capacity} field inherited from Bogie represents freight tonnage.</p>
- *
- * <p><b>Safety note:</b> CYLINDRICAL wagons carry petroleum/flammable liquid.
- * {@link SafetyValidator} enforces that no CYLINDRICAL bogie is adjacent
- * to any PASSENGER bogie in the consist.</p>
+ * UC-12: adds weight-aware constructors for departure sort.
  */
 public class GoodsBogie extends Bogie {
 
-    /** The physical shape/type of this goods wagon (RECTANGULAR or CYLINDRICAL). */
     private GoodsSubType subType;
 
     /**
-     * Constructs a GoodsBogie with the given ID, subtype, and tonnage capacity.
+     * UC-12 constructor — accepts explicit weight separate from capacity.
      *
-     * @param bogieId  unique identifier (e.g. "BG-03")
-     * @param subType  physical type of this wagon
-     * @param capacity freight tonnage this wagon can carry
+     * @param bogieId  unique identifier
+     * @param subType  physical type of wagon
+     * @param capacity freight tonnage
+     * @param weight   physical bogie weight in tonnes
+     */
+    public GoodsBogie(String bogieId, GoodsSubType subType, int capacity, int weight) {
+        super(bogieId, BogieType.GOODS, capacity, weight);
+        this.subType = subType;
+    }
+
+    /**
+     * Backward-compatible constructor — weight defaults to capacity.
+     * Used by UC-01 through UC-11.
+     *
+     * @param bogieId  unique identifier
+     * @param subType  physical type of wagon
+     * @param capacity freight tonnage
      */
     public GoodsBogie(String bogieId, GoodsSubType subType, int capacity) {
         super(bogieId, BogieType.GOODS, capacity);
@@ -27,23 +33,17 @@ public class GoodsBogie extends Bogie {
     }
 
     /**
-     * Returns the GoodsSubType enum value for this wagon.
-     * Use this when you need the typed enum (e.g. in tests or switch statements).
+     * Returns the GoodsSubType enum value.
      *
-     * @return GoodsSubType enum (RECTANGULAR or CYLINDRICAL)
+     * @return GoodsSubType (RECTANGULAR or CYLINDRICAL)
      */
-    public GoodsSubType getGoodsSubType() {
-        return subType;
-    }
+    public GoodsSubType getGoodsSubType() { return subType; }
 
     /**
-     * Returns the subtype name as a String — satisfies the abstract method in {@link Bogie}.
-     * Used by printers and validators for display without casting.
+     * Returns the subtype name as a String — satisfies abstract method in Bogie.
      *
-     * @return subtype name (e.g. "RECTANGULAR", "CYLINDRICAL")
+     * @return subtype name string
      */
     @Override
-    public String getSubType() {
-        return subType.name();
-    }
+    public String getSubType() { return subType.name(); }
 }
