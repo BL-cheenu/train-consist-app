@@ -1,9 +1,12 @@
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.Scanner;
 
 /**
  * Application entry point for the Train Consist Management App.
- * UC-01 through UC-12.
+ * UC-01 through UC-13.
  */
 public class Main {
 
@@ -14,6 +17,7 @@ public class Main {
         System.out.println("     TRAIN CONSIST MANAGEMENT APP");
         System.out.println("========================================\n");
 
+        // ── UC-01 ──────────────────────────────────────────────────────────────
         System.out.println("--- Building Consist A ---");
         TrainConsist consistA = ConsistBuilder.buildConsist();
         ConsistPrinter.printSummary(consistA);
@@ -23,27 +27,29 @@ public class Main {
 
         JourneyLog journeyLog = new JourneyLog(consistA.getTrainNumber());
 
+        // ── UC-02 ──────────────────────────────────────────────────────────────
         RouteType routeType = readRouteType();
         ValidationResult result = SafetyValidator.validate(consistA.getBogies(), routeType);
         ValidationPrinter.printReport(result);
 
+        // ── UC-03 ──────────────────────────────────────────────────────────────
         System.out.println("========================================");
         System.out.println("         BOGIE SEARCH");
         System.out.println("========================================");
-
         while (true) {
             String bogieId = readBogieId();
             if (bogieId.equalsIgnoreCase("exit")) break;
-            Optional<BogieSearchResult> searchResult =
+            Optional<BogieSearchResult> sr =
                     BogieSearchService.findById(consistA.getBogies(), bogieId);
-            if (searchResult.isPresent())
-                BogieSearchPrinter.printFound(searchResult.get(), consistA.getBogies().length);
+            if (sr.isPresent())
+                BogieSearchPrinter.printFound(sr.get(), consistA.getBogies().length);
             else
                 BogieSearchPrinter.printNotFound(bogieId, consistA.getTrainNumber());
             System.out.print("Search another bogie? (yes / no): ");
             if (!scanner.nextLine().trim().equalsIgnoreCase("yes")) break;
         }
 
+        // ── UC-04 to UC-12 ─────────────────────────────────────────────────────
         JunctionOperationsMenu.run(consistA, routeType, journeyLog);
         ShuntingMenu.run(consistA, journeyLog);
         JourneyLogMenu.run(journeyLog);
@@ -56,10 +62,16 @@ public class Main {
         ManifestMenu.run(journeyLog, consistA);
         LoadPlanMenu.run(consistA);
         FleetDashboardMenu.run(consistA);
-        ScheduleMenu.run(consistA);
 
-        // ── UC-12: Departure sort ──────────────────────────────────────────────
+        // Build route schedule for UC-11 and UC-13
+        // Collect stations from the schedule menu — passed to analytics
+        List<StationStop> stations = new ArrayList<>();
+        ScheduleMenu.runWithStations(consistA, stations);
+
         DepartureSortMenu.run(consistA);
+
+        // ── UC-13: Fleet analytics dashboard ──────────────────────────────────
+        AnalyticsMenu.run(consistA.getBogieList(), stations);
 
         scanner.close();
     }
