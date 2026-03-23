@@ -16,6 +16,7 @@ import java.util.Scanner;
  *   <li><b>UC-08</b> — Safety manifest in attachment order.</li>
  *   <li><b>UC-09</b> — Load plan — sort bogies by capacity.</li>
  *   <li><b>UC-10</b> — Real-time bogie lookup and cargo update.</li>
+ *   <li><b>UC-11</b> — Station schedule and cargo manifest.</li>
  * </ol>
  */
 public class Main {
@@ -95,6 +96,9 @@ public class Main {
 
         // ── UC-10: Real-time bogie lookup and cargo update ─────────────────────
         FleetDashboardMenu.run(consistA);
+
+        // ── UC-11: Station schedule and cargo manifest ─────────────────────────
+        ScheduleMenu.run(consistA);
 
         scanner.close();
     }
