@@ -1,12 +1,11 @@
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Scanner;
 
 /**
  * Application entry point for the Train Consist Management App.
- * UC-01 through UC-13.
+ * UC-01 through UC-14.
  */
 public class Main {
 
@@ -49,29 +48,33 @@ public class Main {
             if (!scanner.nextLine().trim().equalsIgnoreCase("yes")) break;
         }
 
-        // ── UC-04 to UC-12 ─────────────────────────────────────────────────────
+        // ── UC-04 to UC-06 ─────────────────────────────────────────────────────
         JunctionOperationsMenu.run(consistA, routeType, journeyLog);
         ShuntingMenu.run(consistA, journeyLog);
         JourneyLogMenu.run(journeyLog);
 
+        // ── UC-07 ──────────────────────────────────────────────────────────────
         System.out.println("\n--- Building Consist B (for marshal) ---");
         TrainConsist consistB = ConsistBuilder.buildConsist();
         ConsistPrinter.printSummary(consistB);
         MarshalMenu.run(consistA, consistB, registry);
 
+        // ── UC-08 to UC-12 ─────────────────────────────────────────────────────
         ManifestMenu.run(journeyLog, consistA);
         LoadPlanMenu.run(consistA);
         FleetDashboardMenu.run(consistA);
 
-        // Build route schedule for UC-11 and UC-13
-        // Collect stations from the schedule menu — passed to analytics
         List<StationStop> stations = new ArrayList<>();
         ScheduleMenu.runWithStations(consistA, stations);
-
         DepartureSortMenu.run(consistA);
 
-        // ── UC-13: Fleet analytics dashboard ──────────────────────────────────
+        // ── UC-13 ──────────────────────────────────────────────────────────────
         AnalyticsMenu.run(consistA.getBogieList(), stations);
+
+        // ── UC-14: Smart query engine ──────────────────────────────────────────
+        // Build BogieIndex once — reused for all O(1) lookups in query engine
+        BogieIndex bogieIndex = BogieIndex.build(consistA.getBogieList());
+        QueryMenu.run(consistA.getBogieList(), bogieIndex);
 
         scanner.close();
     }
